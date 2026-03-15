@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteAI — Intelligent Writing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-mark">✦</span>
+                <span class="logo-text">NoteAI</span>
+            </div>
+            <button class="icon-btn" onclick="toggleSidebar()" title="Close">✕</button>
+        </div>
+
+        <button class="new-note-btn" onclick="createNewNote()">
+            <span class="btn-icon">+</span>
+            <span>New Note</span>
+        </button>
+
+        <div class="notes-section-label">RECENT NOTES</div>
+        <div class="notes-list" id="notes-list"></div>
+
+        <div class="sidebar-footer">
+            <button class="footer-btn" onclick="document.getElementById('file-input').click()">
+                <span>↑</span> Upload .txt
+            </button>
+            <button class="footer-btn" onclick="downloadNote()">
+                <span>↓</span> Download
+            </button>
+            <input type="file" id="file-input" accept=".txt,.md" style="display:none" onchange="uploadNote(event)">
+        </div>
+    </aside>
+
+    <!-- ═══ MAIN CONTENT ═══ -->
+    <main class="main-content" id="main-content">
+
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="icon-btn menu-toggle" onclick="toggleSidebar()" title="Toggle sidebar">☰</button>
+                <div class="note-meta">
+                    <h1 id="note-title" contenteditable="true" spellcheck="false" onblur="onTitleChange()"
+                        onkeydown="onTitleKeydown(event)">Untitled Note</h1>
+                    <div class="note-badges">
+                        <span id="theme-badge" class="badge">—</span>
+                        <span id="save-indicator" class="save-dot saved" title="All changes saved">●</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar" id="toolbar">
+                <button class="tool-btn" onclick="undoAction()" title="Undo (Ctrl+Z)">⟲</button>
+                <button class="tool-btn" onclick="redoAction()" title="Redo (Ctrl+Y)">⟳</button>
+                <div class="tool-sep"></div>
+                <button class="tool-btn" id="find-toggle-btn" onclick="toggleFind()"
+                    title="Find & Replace (Ctrl+F)">⌕</button>
+                <button class="tool-btn" onclick="toggleGrammarFix()" title="Fix all grammar with AI">✓ Fix</button>
+                <div class="tool-sep"></div>
+                <button class="tool-btn" onclick="changeFontSize(-1)" title="Smaller text">A−</button>
+                <button class="tool-btn" onclick="changeFontSize(1)" title="Larger text">A+</button>
+                <div class="tool-sep"></div>
+                <button class="tool-btn" id="ln-btn" onclick="toggleLineNumbers()"
+                    title="Toggle line numbers">#</button>
+                <button class="tool-btn" id="focus-btn" onclick="toggleFocusMode()" title="Focus mode">◎</button>
+                <button class="tool-btn" id="theme-toggle-btn" onclick="toggleTheme()"
+                    title="Light/Dark mode">◑</button>
+            </div>
+
+            <div class="top-bar-right">
+                <span id="ai-status" class="ai-status">AI Ready</span>
+            </div>
+        </header>
+
+        <!-- Find & Replace Bar -->
+        <div id="find-box" class="find-bar" style="display:none">
+            <div class="find-inner">
+                <span class="find-icon">⌕</span>
+                <input type="text" id="find-input" placeholder="Find..." oninput="onFindInput()"
+                    onkeydown="onFindKeydown(event)">
+                <span id="match-count" class="match-count"></span>
+                <div class="find-vsep"></div>
+                <input type="text" id="replace-input" placeholder="Replace with..." onkeydown="onReplaceKeydown(event)">
+                <button class="find-nav-btn" onclick="findPrev()" title="Previous match">↑</button>
+                <button class="find-nav-btn" onclick="findNext()" title="Next match">↓</button>
+                <button class="find-action-btn" onclick="replaceOne()">Replace</button>
+                <button class="find-action-btn accent" onclick="replaceAll()">Replace All</button>
+                <button class="find-close-btn" onclick="toggleFind()">✕</button>
+            </div>
+        </div>
+
+        <!-- Editor Area -->
+        <section class="editor-section">
+            <!-- Line Numbers -->
+            <div id="line-numbers" class="line-numbers" style="display:none"></div>
+
+            <!-- Editor + Backdrop -->
+            <div class="editor-outer" id="editor-outer">
+                <div class="editor-inner" id="editor-inner">
+                    <div id="highlight-backdrop" aria-hidden="true"></div>
+                    <textarea id="editor" spellcheck="false" placeholder="Start writing your note..."
+                        oninput="onEditorInput(event)" onkeydown="onEditorKeydown(event)" onclick="onEditorClick(event)"
+                        onscroll="syncScroll()" onkeyup="updateCursorStat()"></textarea>
+                </div>
+            </div>
+
+            <!-- AI Panel -->
+            <aside id="ai-panel" class="ai-panel">
+                <div class="ai-panel-header">
+                    <span class="ai-sparkle">✦</span>
+                    <span class="ai-panel-title">AI Assistant</span>
+                    <button class="icon-btn small" onclick="toggleAiPanel()" title="Collapse panel">−</button>
+                </div>
+                <div class="ai-panel-body" id="ai-panel-body">
+                    <div class="ai-section">
+                        <div class="ai-label">WRITING TYPE</div>
+                        <div class="ai-value" id="ai-theme">—</div>
+                    </div>
+                    <div class="ai-section">
+                        <div class="ai-label">FORMATTING TIP</div>
+                        <div class="ai-value muted" id="ai-format">Start typing to analyze...</div>
+                    </div>
+                    <div class="ai-section" id="ai-issues-section" style="display:none">
+                        <div class="ai-label">ACTIVE ISSUES</div>
+                        <div id="ai-issues-list" class="ai-issues-list"></div>
+                    </div>
+                    <div class="ai-actions">
+                        <button class="ai-action-btn" onclick="toggleGrammarFix()">
+                            <span>✓</span> Fix All Grammar
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </section>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="stat-words">0 words</span>
+                <span class="status-sep">·</span>
+                <span id="stat-chars">0 chars</span>
+                <span class="status-sep">·</span>
+                <span id="stat-lines">1 line</span>
+                <span class="status-sep">·</span>
+                <span id="stat-read-time">~1 min read</span>
+            </div>
+            <div class="status-right">
+                <span id="stat-cursor">Ln 1, Col 1</span>
+                <span class="status-sep">·</span>
+                <span id="stat-spell" class="stat-errors">0 spelling</span>
+                <span class="status-sep">·</span>
+                <span id="stat-grammar" class="stat-errors">0 grammar</span>
+            </div>
+        </footer>
+    </main>
+
+    <!-- ═══ SPELL POPOVER ═══ -->
+    <div id="spell-popover" class="popover" style="display:none">
+        <div class="popover-header">
+            <span class="popover-icon">📝</span>
+            <span>Spelling: <strong id="spell-word-label"></strong></span>
+            <button class="popover-close" onclick="hidePopovers()">✕</button>
+        </div>
+        <div id="spell-suggestions-list" class="popover-suggestions"></div>
+        <div class="popover-footer">
+            <button class="popover-action-btn" onclick="ignoreSpellError()">Ignore</button>
+            <button class="popover-action-btn" onclick="addToDict()">Add to Dictionary</button>
+        </div>
+    </div>
+
+    <!-- ═══ GRAMMAR POPOVER ═══ -->
+    <div id="grammar-popover" class="popover grammar-popover" style="display:none">
+        <div class="popover-header">
+            <span class="popover-icon">🔤</span>
+            <span>Grammar Issue</span>
+            <button class="popover-close" onclick="hidePopovers()">✕</button>
+        </div>
+        <div class="popover-grammar-body">
+            <div class="popover-label">Suggested fix:</div>
+            <div id="grammar-corrected-text" class="popover-corrected-text"></div>
+        </div>
+        <div class="popover-footer">
+            <button class="popover-primary-btn" onclick="applyGrammarFix()">Apply Fix ↵</button>
+            <button class="popover-action-btn" onclick="ignoreGrammarError()">Ignore</button>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>

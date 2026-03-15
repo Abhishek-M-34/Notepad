@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+pyspellchecker
+groq
+python-multipart
+aiofiles
+jinja2
+python-dotenv
+textblob
